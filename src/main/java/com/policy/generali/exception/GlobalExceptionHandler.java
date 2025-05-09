@@ -30,5 +30,11 @@ public class GlobalExceptionHandler {
         String message = "Duplicate entry: A policy with the same number already exists.";
         return ResponseEntity.status(HttpStatus.CONFLICT).body(message);
     }
+    
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<String> handleAllExceptions(Exception ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error occurred: " + ex.getMessage());
+    }
 }
 

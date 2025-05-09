@@ -1,21 +1,14 @@
 package com.policy.generali.controller;
 
+import com.policy.generali.constant.ApiMessages;
+import com.policy.generali.dto.ApiResponse;
+import com.policy.generali.entity.Policy;
+import com.policy.generali.service.PolicyService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.policy.generali.entity.Policy;
-import com.policy.generali.service.PolicyService;
-
-import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/policies")
@@ -25,35 +18,61 @@ public class PolicyController {
     private PolicyService service;
 
     @PostMapping("/create")
-    public ResponseEntity<?> createPolicy(@Valid @RequestBody Policy policy) {
-        service.savePolicy(policy);
-        return ResponseEntity.status(201).body("Policy Created successfully");
-    }
-
-    @GetMapping("/{policyNumber}")
-    public ResponseEntity<Object> getPolicy(@PathVariable("policyNumber") String policyNumber) {
-        return service.getPolicyByNumber(policyNumber)
-                .<ResponseEntity<Object>>map(policy -> ResponseEntity.status(201).body(policy))
-                .orElse(ResponseEntity.status(404).body("Policy Does not exist"));
-    }
-    
-    @PutMapping("/update/{policyNumber}")
-    public ResponseEntity<?> updatePolicy(@PathVariable("policyNumber") String policyNumber,
-                                          @Valid @RequestBody Policy updatedPolicy) {
-        return service.updatePolicy(policyNumber, updatedPolicy)
-                .<ResponseEntity<?>>map(policy -> ResponseEntity.ok("Policy updated successfully"))
-                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Policy does not exist"));
-    }
-
-    @DeleteMapping("/{policyNumber}")
-    public ResponseEntity<?> deletePolicy(@PathVariable("policyNumber") String policyNumber) {
-        boolean deleted = service.deletePolicy(policyNumber);
-        if (deleted) {
-            return ResponseEntity.ok("Policy deleted successfully");
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Policy does not exist");
+    public ResponseEntity<ApiResponse<Policy>> createPolicy(@Valid @RequestBody Policy policy) {
+        try {
+            Policy createdPolicy = service.savePolicy(policy);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(new ApiResponse<>(true, ApiMessages.POLICY_CREATED, createdPolicy, null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, ApiMessages.CREATE_POLICY_ERROR, null, "API_500"));
         }
     }
 
-}
+    @GetMapping("/{policyNumber}")
+    public ResponseEntity<ApiResponse<Policy>> getPolicy(@PathVariable String policyNumber) {
+        try {
+            return service.getPolicyByNumber(policyNumber)
+                    .map(policy -> ResponseEntity.ok(
+                            new ApiResponse<>(true, ApiMessages.POLICY_FOUND, policy, null)))
+                    .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                            .body(new ApiResponse<>(false, ApiMessages.POLICY_NOT_FOUND, null, "API_404")));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, ApiMessages.GET_POLICY_ERROR, null, "API_500"));
+        }
+    }
+    
+    @PutMapping("/update/{policyNumber}")
+    public ResponseEntity<ApiResponse<Policy>> updatePolicy(
+            @PathVariable String policyNumber,
+            @Valid @RequestBody Policy updatedPolicy) {
+        try {
+            return service.updatePolicy(policyNumber, updatedPolicy)
+                    .map(policy -> ResponseEntity.ok(
+                            new ApiResponse<>(true, ApiMessages.POLICY_UPDATED, policy, null)))
+                    .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                            .body(new ApiResponse<>(false, ApiMessages.POLICY_NOT_FOUND, null, "API_404")));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, ApiMessages.UPDATE_POLICY_ERROR, null, "API_500"));
+        }
+    }
 
+    @DeleteMapping("/{policyNumber}")
+    public ResponseEntity<ApiResponse<Void>> deletePolicy(@PathVariable String policyNumber) {
+        try {
+            boolean deleted = service.deletePolicy(policyNumber);
+            if (deleted) {
+                return ResponseEntity.ok(
+                        new ApiResponse<Void>(true, ApiMessages.POLICY_DELETED, null, null));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ApiResponse<Void>(false, ApiMessages.POLICY_NOT_FOUND, null, "API_404"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<Void>(false, ApiMessages.DELETE_POLICY_ERROR, null, "API_500"));
+        }
+    }
+}
