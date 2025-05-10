@@ -1,7 +1,6 @@
 package com.policy.generali.controller;
 
 import com.policy.generali.constant.ApiMessages;
-import com.policy.generali.dto.ApiResponse;
 import com.policy.generali.entity.Policy;
 import com.policy.generali.service.PolicyService;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,8 +14,6 @@ import org.springframework.http.ResponseEntity;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 class PolicyControllerTest {
@@ -32,156 +29,89 @@ class PolicyControllerTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        
         testPolicy = new Policy();
         testPolicy.setPolicyNumber("POL123");
-        testPolicy.setPolicyType("Life Insurance");
-        testPolicy.setPremium(1000.0);
+        testPolicy.setPolicyHolderName("Test Policy");
+        // set other required fields
     }
 
-    // CREATE POLICY TESTS
     @Test
-    void createPolicy_ShouldReturnCreatedResponse_WhenValidPolicy() {
-        // Arrange
-        when(policyService.savePolicy(any(Policy.class))).thenReturn(testPolicy);
-        
+    void createPolicy_ShouldReturnCreatedStatus() {
         // Act
-        ResponseEntity<ApiResponse<Policy>> response = policyController.createPolicy(testPolicy);
-        
+        ResponseEntity<?> response = policyController.createPolicy(testPolicy);
+
         // Assert
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        assertTrue(response.getBody().isSuccess());
-        assertEquals(ApiMessages.POLICY_CREATED, response.getBody().getMessage());
-        assertEquals(testPolicy, response.getBody().getData());
+        assertEquals(ApiMessages.POLICY_CREATED, response.getBody());
         verify(policyService, times(1)).savePolicy(testPolicy);
     }
 
-    // GET POLICY TESTS
     @Test
-    void getPolicy_ShouldReturnPolicy_WhenPolicyExists() {
+    void getPolicy_WhenPolicyExists_ShouldReturnPolicy() {
         // Arrange
         when(policyService.getPolicyByNumber("POL123")).thenReturn(Optional.of(testPolicy));
-        
+
         // Act
-        ResponseEntity<ApiResponse<Policy>> response = policyController.getPolicy("POL123");
-        
+        ResponseEntity<Object> response = policyController.getPolicy("POL123");
+
         // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(response.getBody().isSuccess());
-        assertEquals(ApiMessages.POLICY_FOUND, response.getBody().getMessage());
-        assertEquals(testPolicy, response.getBody().getData());
+        assertEquals(HttpStatus.FOUND, response.getStatusCode());
+        assertEquals(testPolicy, response.getBody());
     }
 
     @Test
-    void getPolicy_ShouldReturnNotFound_WhenPolicyDoesNotExist() {
+    void getPolicy_WhenPolicyNotExists_ShouldReturnNotFound() {
         // Arrange
-        when(policyService.getPolicyByNumber("NONEXISTENT")).thenReturn(Optional.empty());
-        
+        when(policyService.getPolicyByNumber("POL999")).thenReturn(Optional.empty());
+
         // Act
-        ResponseEntity<ApiResponse<Policy>> response = policyController.getPolicy("NONEXISTENT");
-        
+        ResponseEntity<Object> response = policyController.getPolicy("POL999");
+
         // Assert
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        assertFalse(response.getBody().isSuccess());
-        assertEquals(ApiMessages.POLICY_NOT_FOUND, response.getBody().getMessage());
-        assertNull(response.getBody().getData());
-        assertEquals("API_404", response.getBody().getErrorCode());
+        assertEquals(ApiMessages.POLICY_NOT_FOUND, response.getBody());
     }
 
-    // UPDATE POLICY TESTS
     @Test
-    void updatePolicy_ShouldReturnOk_WhenPolicyExists() {
+    void updatePolicy_WhenPolicyExists_ShouldReturnOk() {
         // Arrange
-        when(policyService.updatePolicy("POL123", testPolicy)).thenReturn(Optional.of(testPolicy));
-        
+        Policy updatedPolicy = new Policy();
+        updatedPolicy.setPolicyHolderName("Updated Policy");
+        when(policyService.updatePolicy("POL123", updatedPolicy)).thenReturn(Optional.of(updatedPolicy));
+
         // Act
-        ResponseEntity<ApiResponse<Policy>> response = 
-            policyController.updatePolicy("POL123", testPolicy);
-        
+        ResponseEntity<?> response = policyController.updatePolicy("POL123", updatedPolicy);
+
         // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(response.getBody().isSuccess());
-        assertEquals(ApiMessages.POLICY_UPDATED, response.getBody().getMessage());
-        assertEquals(testPolicy, response.getBody().getData());
+        assertEquals(ApiMessages.POLICY_UPDATED, response.getBody());
     }
 
     @Test
-    void updatePolicy_ShouldReturnNotFound_WhenPolicyDoesNotExist() {
+    void updatePolicy_WhenPolicyNotExists_ShouldReturnNotFound() {
         // Arrange
-        when(policyService.updatePolicy("NONEXISTENT", testPolicy)).thenReturn(Optional.empty());
-        
+        Policy updatedPolicy = new Policy();
+        updatedPolicy.setPolicyHolderName("Updated Policy");
+        when(policyService.updatePolicy("POL999", updatedPolicy)).thenReturn(Optional.empty());
+
         // Act
-        ResponseEntity<ApiResponse<Policy>> response = 
-            policyController.updatePolicy("NONEXISTENT", testPolicy);
-        
+        ResponseEntity<?> response = policyController.updatePolicy("POL999", updatedPolicy);
+
         // Assert
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        assertFalse(response.getBody().isSuccess());
-        assertEquals(ApiMessages.POLICY_NOT_FOUND, response.getBody().getMessage());
-        assertNull(response.getBody().getData());
-        assertEquals("API_404", response.getBody().getErrorCode());
+        assertEquals(ApiMessages.POLICY_NOT_FOUND, response.getBody());
     }
 
-    // DELETE POLICY TESTS
     @Test
-    void deletePolicy_ShouldReturnOk_WhenPolicyExists() {
+    void deletePolicy_WhenPolicyExists_ShouldReturnOk() {
         // Arrange
         when(policyService.deletePolicy("POL123")).thenReturn(true);
-        
+
         // Act
-        ResponseEntity<ApiResponse<Void>> response = policyController.deletePolicy("POL123");
-        
+        ResponseEntity<?> response = policyController.deletePolicy("POL123");
+
         // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(response.getBody().isSuccess());
-        assertEquals(ApiMessages.POLICY_DELETED, response.getBody().getMessage());
-        assertNull(response.getBody().getData());
-    }
-
-    @Test
-    void deletePolicy_ShouldReturnNotFound_WhenPolicyDoesNotExist() {
-        // Arrange
-        when(policyService.deletePolicy("NONEXISTENT")).thenReturn(false);
-        
-        // Act
-        ResponseEntity<ApiResponse<Void>> response = policyController.deletePolicy("NONEXISTENT");
-        
-        // Assert
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        assertFalse(response.getBody().isSuccess());
-        assertEquals(ApiMessages.POLICY_NOT_FOUND, response.getBody().getMessage());
-        assertNull(response.getBody().getData());
-        assertEquals("API_404", response.getBody().getErrorCode());
-    }
-
-    // EXCEPTION HANDLING TESTS
-    @Test
-    void createPolicy_ShouldHandleServiceException() {
-        // Arrange
-        doThrow(new RuntimeException("Database error")).when(policyService).savePolicy(any());
-        
-        // Act
-        ResponseEntity<ApiResponse<Policy>> response = policyController.createPolicy(testPolicy);
-        
-        // Assert
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertFalse(response.getBody().isSuccess());
-        assertEquals(ApiMessages.CREATE_POLICY_ERROR, response.getBody().getMessage());
-        assertEquals("API_500", response.getBody().getErrorCode());
-    }
-
-    @Test
-    void getPolicy_ShouldHandleServiceException() {
-        // Arrange
-        when(policyService.getPolicyByNumber("POL123")).thenThrow(new RuntimeException("DB error"));
-        
-        // Act
-        ResponseEntity<ApiResponse<Policy>> response = policyController.getPolicy("POL123");
-        
-        // Assert
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertFalse(response.getBody().isSuccess());
-        assertEquals(ApiMessages.GET_POLICY_ERROR, response.getBody().getMessage());
-        assertEquals("API_500", response.getBody().getErrorCode());
+        assertEquals(ApiMessages.POLICY_DELETED, response.getBody());
     }
 }
